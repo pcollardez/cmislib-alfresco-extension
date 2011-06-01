@@ -30,7 +30,7 @@ class CmisAlfTestBase(unittest.TestCase):
 
     def tearDown(self):
         """ Clean up after the test. """
-        #self._testFolder.deleteTree()
+        self._testFolder.deleteTree()
 
 class HookTest(CmisAlfTestBase):
 
@@ -55,6 +55,10 @@ class HookTest(CmisAlfTestBase):
         props = {'cm:summary': 'bla bla bla'}
         newDoc.updateProperties(props)
         self.assertEqual('bla bla bla', newDoc.getProperties()['cm:summary'])
+        
+        newDoc.removeAspect('P:cm:summarizable')
+        self.assertFalse(newDoc.hasAspect('P:cm:summarizable'))
+        self.assertTrue(newDoc.getProperties().get('cm:summary') is None)
         
 
 if __name__ == "__main__":
