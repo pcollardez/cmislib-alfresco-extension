@@ -7,6 +7,7 @@ import unittest
 from unittest import TestSuite, TestLoader
 import cmislibalf
 from cmislib import CmisClient
+from cmislib.exceptions import *
 from time import time
 
 REPOSITORY_URL = 'http://localhost:8080/alfresco/s/api/cmis'
@@ -56,8 +57,15 @@ class HookTest(CmisAlfTestBase):
         newDoc.updateProperties(props)
         self.assertEqual('bla bla bla', newDoc.getProperties()['cm:summary'])
         
+        self.assertEqual(newDoc.properties, newDoc.getProperties())
+        
         newDoc.removeAspect('P:cm:summarizable')
         self.assertFalse(newDoc.hasAspect('P:cm:summarizable'))
+        self.assertTrue(newDoc.getProperties().get('cm:summary') is None)
+                
+        self.assertRaises(InvalidArgumentException, newDoc.addAspect, 'P:no:aspect')
+        self.assertRaises(InvalidArgumentException, newDoc.updateProperties, props)
+        
         self.assertTrue(newDoc.getProperties().get('cm:summary') is None)
         
 

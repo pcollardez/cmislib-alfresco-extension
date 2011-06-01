@@ -1,20 +1,31 @@
 from cmislib import model
+from cmislib.exceptions import InvalidArgumentException
 import datetime
 
 ALFRESCO_NS = 'http://www.alfresco.org'
-ASPECTS = 'alf:aspects'
-PROPERTIES = 'properties'
-APPLIED_ASPECTS = 'appliedAspects'
-SET_ASPECTS = 'alf:setAspects'
-ASPECTS_TO_ADD = 'alf:aspectsToAdd'
-ASPECTS_TO_REMOVE = 'alf:aspectsToRemove'
+ALFRESCO_NSALIAS = 'alf'
+ALFRESCO_NSALIAS_DECL = 'xmlns:' + ALFRESCO_NSALIAS
+ALFRESCO_NSPREFIX = ALFRESCO_NSALIAS + ':'
+
+LOCALNAME_ASPECTS = 'aspects'
+LOCALNAME_PROPERTIES = 'properties'
+LOCALNAME_APPLIED_ASPECTS = 'appliedAspects'
+LOCALNAME_SET_ASPECTS = 'setAspects'
+LOCALNAME_ASPECTS_TO_ADD = 'aspectsToAdd'
+LOCALNAME_ASPECTS_TO_REMOVE = 'aspectsToRemove'
+
+TAGNAME_ALFRESCO_PROPERTIES = ALFRESCO_NSPREFIX + LOCALNAME_PROPERTIES
+TAGNAME_SET_ASPECTS = ALFRESCO_NSPREFIX + LOCALNAME_SET_ASPECTS
+TAGNAME_ASPECTS_TO_ADD = ALFRESCO_NSPREFIX + LOCALNAME_ASPECTS_TO_ADD
+TAGNAME_ASPECTS_TO_REMOVE = ALFRESCO_NSPREFIX + LOCALNAME_ASPECTS_TO_REMOVE
+
 OBJECT_TYPE_ID = 'cmis:objectTypeId'
 
 def addSetAspectsToXMLDocument(xmldoc):
     entryElements = xmldoc.getElementsByTagNameNS(model.ATOM_NS, 'entry')
-    entryElements[0].setAttribute('xmlns:alf', ALFRESCO_NS)
+    entryElements[0].setAttribute(ALFRESCO_NSALIAS_DECL, ALFRESCO_NS)
     
-    propertiesElements = xmldoc.getElementsByTagNameNS(model.CMIS_NS, PROPERTIES)
+    propertiesElements = xmldoc.getElementsByTagNameNS(model.CMIS_NS, LOCALNAME_PROPERTIES)
     if len(propertiesElements) == 0:
         objectElement = xmldoc.getElementsByTagNameNS(model.CMISRA_NS, 'object')
         propertiesElement = xmldoc.createElementNS(model.CMIS_NS, 'cmis:properties')
@@ -22,7 +33,7 @@ def addSetAspectsToXMLDocument(xmldoc):
     else:
         propertiesElement = propertiesElements[0]
     
-    aspectsElement = xmldoc.createElementNS(ALFRESCO_NS, SET_ASPECTS)
+    aspectsElement = xmldoc.createElementNS(ALFRESCO_NS, TAGNAME_SET_ASPECTS)
     propertiesElement.appendChild(aspectsElement)
     
     return aspectsElement
@@ -120,7 +131,7 @@ def _findAlfrescoExtensions(self):
     if self._aspects == {}:
         if self.xmlDoc == None:
             self.reload()
-        appliedAspects = self.xmlDoc.getElementsByTagNameNS(ALFRESCO_NS, APPLIED_ASPECTS)
+        appliedAspects = self.xmlDoc.getElementsByTagNameNS(ALFRESCO_NS, LOCALNAME_APPLIED_ASPECTS)
         for node in appliedAspects:
             aspectType = self._repository.getTypeDefinition(node.childNodes[0].data)
             self._aspects[node.childNodes[0].data] = aspectType
@@ -153,24 +164,16 @@ def _updateAspects(self, addAspects=None, removeAspects=None):
         selfUrl = self._getSelfLink()
         xmlEntryDoc = model.getEntryXmlDoc()
         # Patch xmlEntryDoc
-        #propertiesElement = xmlEntryDoc.getElementsByTagNameNS(model.CMIS_NS, 'cmis:properties')
-#        entryElement = xmlEntryDoc.getElementsByTagNameNS(model.ATOM_NS, "entry")
-#        entryElement[0].setAttribute('xmlns:alf', ALFRESCO_NS)
-#        objectElement = xmlEntryDoc.getElementsByTagNameNS(model.CMISRA_NS, 'object')
-#        propertiesElement = xmlEntryDoc.createElementNS(model.CMIS_NS, 'cmis:properties')
-#        objectElement[0].appendChild(propertiesElement)
-#        setAspectsElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, SET_ASPECTS)
-#        propertiesElement.appendChild(setAspectsElement)
         setAspectsElement = addSetAspectsToXMLDocument(xmlEntryDoc)
         
         if addAspects:
-            addAspectElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, ASPECTS_TO_ADD)
+            addAspectElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, TAGNAME_ASPECTS_TO_ADD)
             valText = xmlEntryDoc.createTextNode(addAspects)
             addAspectElement.appendChild(valText)
             setAspectsElement.appendChild(addAspectElement)
         
         if removeAspects:
-            removeAspectElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, ASPECTS_TO_REMOVE)
+            removeAspectElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, TAGNAME_ASPECTS_TO_REMOVE)
             valText = xmlEntryDoc.createTextNode(removeAspects)
             removeAspectElement.appendChild(valText)
             setAspectsElement.appendChild(removeAspectElement)
@@ -187,7 +190,7 @@ def getProperties(self):
     if not hasattr(self, '_alfproperties'):
         self._alfproperties = {}
     if self._alfproperties == {}:
-        alfpropertiesElement = self.xmlDoc.getElementsByTagNameNS(ALFRESCO_NS, PROPERTIES)[0]
+        alfpropertiesElement = self.xmlDoc.getElementsByTagNameNS(ALFRESCO_NS, LOCALNAME_PROPERTIES)[0]
         for node in [e for e in alfpropertiesElement.childNodes if e.nodeType == e.ELEMENT_NODE and e.namespaceURI == model.CMIS_NS]:
             #propertyId, propertyString, propertyDateTime
             #propertyType = cpattern.search(node.localName).groups()[0]
@@ -227,30 +230,19 @@ def updateProperties(self, properties):
         if (propertyName == OBJECT_TYPE_ID) or (propertyName in objectTypePropsDef.keys()):
             cmisproperties[propertyName] = propertyValue
         else:
-            # TODO check if the property belongs to an aspect. If not, raise an exception
-            alfproperties[propertyName] = propertyValue
+            if self.findAspect(propertyName) is None:
+                raise InvalidArgumentException
+            else:
+                alfproperties[propertyName] = propertyValue
     
     xmlEntryDoc = model.getEntryXmlDoc(cmisproperties)
     
     # Patch xmlEntryDoc
     # add alfresco properties
     if len(alfproperties) > 0:
-#        entryElements = xmlEntryDoc.getElementsByTagNameNS(model.ATOM_NS, 'entry')
-#        entryElements[0].setAttribute('xmlns:alf', ALFRESCO_NS)
-#        
-#        propertiesElements = xmlEntryDoc.getElementsByTagNameNS(model.CMIS_NS, PROPERTIES)
-#        if len(propertiesElements) == 0:
-#            objectElement = xmlEntryDoc.getElementsByTagNameNS(model.CMISRA_NS, 'object')
-#            propertiesElement = xmlEntryDoc.createElementNS(model.CMIS_NS, 'cmis:properties')
-#            objectElement[0].appendChild(propertiesElement)
-#        else:
-#            propertiesElement = propertiesElements[0]
-#        
-#        aspectsElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, SET_ASPECTS)
-#        propertiesElement.appendChild(aspectsElement)
         aspectsElement = addSetAspectsToXMLDocument(xmlEntryDoc)
         
-        alfpropertiesElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, 'alf:' + PROPERTIES)
+        alfpropertiesElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, TAGNAME_ALFRESCO_PROPERTIES)
         aspectsElement.appendChild(alfpropertiesElement)
         # Like regular properties
         addPropertiesToXMLElement(xmlEntryDoc, alfpropertiesElement, alfproperties)
