@@ -208,28 +208,30 @@ def getProperties(self):
     if not hasattr(self, '_alfproperties'):
         self._alfproperties = {}
     if self._alfproperties == {}:
-        alfpropertiesElement = self.xmlDoc.getElementsByTagNameNS(ALFRESCO_NS, LOCALNAME_PROPERTIES)[0]
-        for node in [e for e in alfpropertiesElement.childNodes if e.nodeType == e.ELEMENT_NODE and e.namespaceURI == model.CMIS_NS]:
-            #propertyId, propertyString, propertyDateTime
-            #propertyType = cpattern.search(node.localName).groups()[0]
-            propertyName = node.attributes['propertyDefinitionId'].value
-            if node.childNodes and \
-               node.getElementsByTagNameNS(model.CMIS_NS, 'value')[0] and \
-               node.getElementsByTagNameNS(model.CMIS_NS, 'value')[0].childNodes:
-                valNodeList = node.getElementsByTagNameNS(model.CMIS_NS, 'value')
-                if (len(valNodeList) == 1):
-                    propertyValue = model.parsePropValue(valNodeList[0].
-                                                   childNodes[0].data,
-                                                   node.localName)
+        alfpropertiesElements = self.xmlDoc.getElementsByTagNameNS(ALFRESCO_NS, LOCALNAME_PROPERTIES)
+        if len(alfpropertiesElements) > 0:
+            alfpropertiesElement = alfpropertiesElements[0]
+            for node in [e for e in alfpropertiesElement.childNodes if e.nodeType == e.ELEMENT_NODE and e.namespaceURI == model.CMIS_NS]:
+                #propertyId, propertyString, propertyDateTime
+                #propertyType = cpattern.search(node.localName).groups()[0]
+                propertyName = node.attributes['propertyDefinitionId'].value
+                if node.childNodes and \
+                   node.getElementsByTagNameNS(model.CMIS_NS, 'value')[0] and \
+                   node.getElementsByTagNameNS(model.CMIS_NS, 'value')[0].childNodes:
+                    valNodeList = node.getElementsByTagNameNS(model.CMIS_NS, 'value')
+                    if (len(valNodeList) == 1):
+                        propertyValue = model.parsePropValue(valNodeList[0].
+                                                       childNodes[0].data,
+                                                       node.localName)
+                    else:
+                        propertyValue = []
+                        for valNode in valNodeList:
+                            propertyValue.append(model.parsePropValue(valNode.
+                                                       childNodes[0].data,
+                                                       node.localName))
                 else:
-                    propertyValue = []
-                    for valNode in valNodeList:
-                        propertyValue.append(model.parsePropValue(valNode.
-                                                   childNodes[0].data,
-                                                   node.localName))
-            else:
-                propertyValue = None
-            self._alfproperties[propertyName] = propertyValue
+                    propertyValue = None
+                self._alfproperties[propertyName] = propertyValue
     result.update(self._alfproperties)
     return result
 
@@ -277,6 +279,8 @@ def addAspect(self, arg):
         aspect_id = arg
         if isinstance(arg, model.ObjectType):
             aspect_id = arg.getTypeId()
+        if self._repository.getTypeDefinition(aspect_id) is None:
+            raise InvalidArgumentException
         self._updateAspects(addAspects=aspect_id)
 
 def removeAspect(self, arg):
@@ -284,4 +288,6 @@ def removeAspect(self, arg):
         aspect_id = arg
         if isinstance(arg, model.ObjectType):
             aspect_id = arg.getTypeId()
+        if self._repository.getTypeDefinition(aspect_id) is None:
+            raise InvalidArgumentException
         self._updateAspects(removeAspects=aspect_id)
