@@ -180,7 +180,7 @@ def findAspect(self, propertyId):
 def updateAspects(self, addAspects=None, removeAspects=None):
     if addAspects or removeAspects:
         selfUrl = self._getSelfLink()
-        xmlEntryDoc = self._getEntryXmlDoc()
+        xmlEntryDoc = getEntryXmlDoc(self._repository)
         # Patch xmlEntryDoc
         setAspectsElement = addSetAspectsToXMLDocument(xmlEntryDoc)
         
@@ -255,7 +255,7 @@ def updateProperties(self, properties):
             else:
                 alfproperties[propertyName] = propertyValue
     
-    xmlEntryDoc = self._getEntryXmlDoc(cmisproperties)
+    xmlEntryDoc = getEntryXmlDoc(self._repository, cmisproperties)
     
     # Patch xmlEntryDoc
     # add alfresco properties
@@ -291,3 +291,7 @@ def removeAspect(self, arg):
         if self._repository.getTypeDefinition(aspect_id) is None:
             raise InvalidArgumentException
         self._updateAspects(removeAspects=aspect_id)
+
+def getEntryXmlDoc(repo=None, objectTypeId=None, properties=None, contentFile=None,
+                    contentType=None, contentEncoding=None):
+    return model.getEntryXmlDoc(repo, objectTypeId, properties, contentFile, contentType, contentEncoding)

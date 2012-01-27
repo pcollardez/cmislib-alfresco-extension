@@ -20,7 +20,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = '0.3'
+version = '0.3.1'
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -38,7 +38,7 @@ setup(
     #include_package_data = True,
     exclude_package_data = {'':['tests']},
     zip_safe = False,
-    install_requires = ('cmislib==0.4.1'),
+    install_requires = ('cmislib==0.5'),
     long_description = read('README.txt'),
     classifiers = [
         "Development Status :: 3 - Alpha",
