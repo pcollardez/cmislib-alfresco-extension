@@ -9,5 +9,6 @@
 </pydev_pathproperty>
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 <path>/opt/src/chemistry/cmislib/src</path>
+<path>/opt/local/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/iso8601-0.1.4-py2.6.egg</path>
 </pydev_pathproperty>
 </pydev_project>
