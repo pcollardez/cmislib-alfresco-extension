@@ -38,6 +38,7 @@ TAGNAME_ASPECTS_TO_ADD = ALFRESCO_NSPREFIX + LOCALNAME_ASPECTS_TO_ADD
 TAGNAME_ASPECTS_TO_REMOVE = ALFRESCO_NSPREFIX + LOCALNAME_ASPECTS_TO_REMOVE
 
 OBJECT_TYPE_ID = 'cmis:objectTypeId'
+CHANGE_TOKEN = 'cmis:changeToken'
 
 def addSetAspectsToXMLDocument(xmldoc):
     entryElements = xmldoc.getElementsByTagNameNS(model.ATOM_NS, 'entry')
@@ -239,7 +240,14 @@ def updateProperties(self, properties):
     selfUrl = self._getSelfLink()
     cmisproperties = {}
     alfproperties = {}
-    
+
+    # if we have a change token, we must pass it back, per the spec
+    args = {}
+    if (self.properties.has_key(CHANGE_TOKEN) and
+        self.properties[CHANGE_TOKEN] != None):
+        self.logger.debug('Change token present, adding it to args')
+        args = {"changeToken": self.properties[CHANGE_TOKEN]}
+
     objectTypeId = properties.get(OBJECT_TYPE_ID)
     if (objectTypeId is None):
         objectTypeId = self.properties.get(OBJECT_TYPE_ID)
@@ -255,7 +263,7 @@ def updateProperties(self, properties):
             else:
                 alfproperties[propertyName] = propertyValue
     
-    xmlEntryDoc = getEntryXmlDoc(self._repository, cmisproperties)
+    xmlEntryDoc = getEntryXmlDoc(self._repository, properties=cmisproperties)
     
     # Patch xmlEntryDoc
     # add alfresco properties
@@ -269,7 +277,8 @@ def updateProperties(self, properties):
     
     updatedXmlDoc = self._cmisClient.put(selfUrl.encode('utf-8'),
                                          xmlEntryDoc.toxml(encoding='utf-8'),
-                                         model.ATOM_XML_TYPE)
+                                         model.ATOM_XML_TYPE,
+                                         **args)
     self.xmlDoc = updatedXmlDoc
     self._initData()
     return self
