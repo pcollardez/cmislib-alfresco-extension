@@ -57,82 +57,23 @@ def addSetAspectsToXMLDocument(xmldoc):
     
     return aspectsElement
 
-def addPropertiesToXMLElement(xmldoc, element, properties):
+def addPropertiesToXMLElement(xmldoc, element, properties, propertiesAspects):
     for propName, propValue in properties.items():
-        """
-        the name of the element here is significant: it includes the
-        data type. I should be able to figure out the right type based
-        on the actual type of the object passed in.
-    
-        I could do a lookup to the type definition, but that doesn't
-        seem worth the performance hit
-        """
-        propType = type(propValue)
-        isList = False
-        if (propType == list):
+        
+        if (propValue == None or (type(propValue) == list and propValue[0] == None)):
+            propType = propertiesAspects[propName].properties[propName].propertyType
+        elif type(propValue) == list:
             propType = type(propValue[0])
-            isList = True
-    
-        if (propType == model.CmisId):
-            propElementName = 'cmis:propertyId'
-            if isList:
-                propValueStrList = []
-                for val in propValue:
-                    propValueStrList.append(val)
-            else:
-                propValueStrList = [propValue]
-        elif (propType == str):
-            propElementName = 'cmis:propertyString'
-            if isList:
-                propValueStrList = []
-                for val in propValue:
-                    propValueStrList.append(val)
-            else:
-                propValueStrList = [propValue]
-        elif (propType == datetime.datetime):
-            propElementName = 'cmis:propertyDateTime'
-            if isList:
-                propValueStrList = []
-                for val in propValue:
-                    propValueStrList.append(val.isoformat())
-            else:
-                propValueStrList = [propValue.isoformat()]
-        elif (propType == bool):
-            propElementName = 'cmis:propertyBoolean'
-            if isList:
-                propValueStrList = []
-                for val in propValue:
-                    propValueStrList.append(unicode(val).lower())
-            else:
-                propValueStrList = [unicode(propValue).lower()]
-        elif (propType == int):
-            propElementName = 'cmis:propertyInteger'
-            if isList:
-                propValueStrList = []
-                for val in propValue:
-                    propValueStrList.append(unicode(val))
-            else:
-                propValueStrList = [unicode(propValue)]
-        elif (propType == float):
-            propElementName = 'cmis:propertyDecimal'
-            if isList:
-                propValueStrList = []
-                for val in propValue:
-                    propValueStrList.append(unicode(val))
-            else:
-                propValueStrList = [unicode(propValue)]
         else:
-            propElementName = 'cmis:propertyString'
-            if isList:
-                propValueStrList = []
-                for val in propValue:
-                    propValueStrList.append(unicode(val))
-            else:
-                propValueStrList = [unicode(propValue)]
+            propType = type(propValue)
+
+        propElementName, propValueStrList = model.getElementNameAndValues(propType, propName, propValue, type(propValue) == list)
     
         propElement = xmldoc.createElementNS(model.CMIS_NS, propElementName)
         propElement.setAttribute('propertyDefinitionId', propName)
         for val in propValueStrList:
+            if val == None:
+                continue
             valElement = xmldoc.createElementNS(model.CMIS_NS, 'cmis:value')
             valText = xmldoc.createTextNode(val)
             valElement.appendChild(valText)
@@ -240,6 +181,7 @@ def updateProperties(self, properties):
     selfUrl = self._getSelfLink()
     cmisproperties = {}
     alfproperties = {}
+    alfpropsAspects = {}
 
     # if we have a change token, we must pass it back, per the spec
     args = {}
@@ -258,10 +200,12 @@ def updateProperties(self, properties):
         if (propertyName == OBJECT_TYPE_ID) or (propertyName in objectTypePropsDef.keys()):
             cmisproperties[propertyName] = propertyValue
         else:
-            if self.findAspect(propertyName) is None:
+            aspect = self.findAspect(propertyName)
+            if aspect is None:
                 raise InvalidArgumentException
             else:
                 alfproperties[propertyName] = propertyValue
+                alfpropsAspects[propertyName] = aspect
     
     xmlEntryDoc = getEntryXmlDoc(self._repository, properties=cmisproperties)
     
@@ -273,7 +217,7 @@ def updateProperties(self, properties):
         alfpropertiesElement = xmlEntryDoc.createElementNS(ALFRESCO_NS, TAGNAME_ALFRESCO_PROPERTIES)
         aspectsElement.appendChild(alfpropertiesElement)
         # Like regular properties
-        addPropertiesToXMLElement(xmlEntryDoc, alfpropertiesElement, alfproperties)
+        addPropertiesToXMLElement(xmlEntryDoc, alfpropertiesElement, alfproperties, alfpropsAspects)
     
     updatedXmlDoc = self._cmisClient.put(selfUrl.encode('utf-8'),
                                          xmlEntryDoc.toxml(encoding='utf-8'),

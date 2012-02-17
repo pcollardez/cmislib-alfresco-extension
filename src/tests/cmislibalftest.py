@@ -60,8 +60,7 @@ class HookTest(CmisAlfTestBase):
         titledAspectObjectType = self._repo.getTypeDefinition('P:sys:temporary')
         self.assertFalse(otherDoc.hasAspect(titledAspectObjectType))
         
-        #why 4?
-        #self.assertEqual(4, len(otherDoc.getAspects()))
+        self.assertTrue(len(otherDoc.getAspects()) > 0)
         
         aspect = otherDoc.findAspect('cm:title')
         self.assertEqual('P:cm:titled', aspect.getTypeId())
