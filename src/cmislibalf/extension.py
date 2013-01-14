@@ -114,9 +114,13 @@ def findAspect(self, propertyId):
     self._findAlfrescoExtensions()
     if (propertyId is not None) and (len(self._aspects) > 0):
         for id, aspect in self._aspects.iteritems():
-            props = aspect.getProperties()
-            if propertyId in props:
-                return aspect
+            try:
+                props = aspect.getProperties()
+                if propertyId in props:
+                    return aspect
+            except AssertionError:
+                # getProperties raises an exception if the aspect has no property
+                pass
     return None
 
 def updateAspects(self, addAspects=None, removeAspects=None):
