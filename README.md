@@ -16,7 +16,7 @@ If you use [easy\_install](http://peak.telecommunity.com/DevCenter/EasyInstall),
 The extension dynamically injects new methods in cmislib objects.
 To activate the extension, simply import cmislibalf.
 
-```
+```python
 # The following import injects new methods into cmislib classes
 import cmislibalf
 from cmislib import CmisClient
